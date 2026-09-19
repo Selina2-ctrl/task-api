@@ -1,9 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from fastapi import FastAPI, Response
 
-app = FastAPI()
+app = FastAPI(
+    title="Task API",
+    version="1.0",
+    description="A small to-do list API with full CRUD, stored in memory."
+)
 
 tasks = [
     {
@@ -24,18 +27,28 @@ tasks = [
 ]
 
 
+class TaskCreate(BaseModel):
+    title: str | None = None
+
+
+class TaskUpdate(BaseModel):
+    title: str | None = None
+    done: bool | None = None
+
+
 @app.get("/")
 async def root():
+    """Describe this API and list its main endpoint."""
     return {
         "name": "Task API",
         "version": "1.0",
         "endpoints": ["/tasks"]
-
     }
 
 
 @app.get("/health")
 async def health():
+    """Check that the server is alive."""
     return {
         "status": "ok"
     }
@@ -43,11 +56,16 @@ async def health():
 
 @app.get("/tasks")
 async def get_tasks():
+    """Return the full list of tasks."""
     return tasks
 
 
-@app.get("/tasks/{task_id}")
+@app.get(
+    "/tasks/{task_id}",
+    responses={404: {"description": "Task not found"}}
+)
 async def get_task(task_id: int):
+    """Return a single task by its id."""
     for task in tasks:
         if task["id"] == task_id:
             return task
@@ -57,12 +75,13 @@ async def get_task(task_id: int):
     )
 
 
-class TaskCreate(BaseModel):
-    title: str | None = None
-
-
-@app.post("/tasks", status_code=201)
+@app.post(
+    "/tasks",
+    status_code=201,
+    responses={400: {"description": "Title is missing or empty"}}
+)
 async def create_task(body: TaskCreate):
+    """Create a new task from a title. New tasks start as not done."""
     if body.title is None or body.title.strip() == "":
         return JSONResponse(
             status_code=400,
@@ -74,13 +93,15 @@ async def create_task(body: TaskCreate):
     return task
 
 
-class TaskUpdate(BaseModel):
-    title: str | None = None
-    done: bool | None = None
-
-
-@app.put("/tasks/{task_id}")
+@app.put(
+    "/tasks/{task_id}",
+    responses={
+        400: {"description": "Body is empty or title is empty"},
+        404: {"description": "Task not found"}
+    }
+)
 async def update_task(task_id: int, body: TaskUpdate):
+    """Update a task's title and/or done status."""
     for task in tasks:
         if task["id"] == task_id:
             if body.title is None and body.done is None:
@@ -104,8 +125,13 @@ async def update_task(task_id: int, body: TaskUpdate):
     )
 
 
-@app.delete("/tasks/{task_id}", status_code=204)
+@app.delete(
+    "/tasks/{task_id}",
+    status_code=204,
+    responses={404: {"description": "Task not found"}}
+)
 async def delete_task(task_id: int):
+    """Delete a task by its id."""
     for task in tasks:
         if task["id"] == task_id:
             tasks.remove(task)

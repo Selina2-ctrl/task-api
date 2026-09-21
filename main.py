@@ -46,6 +46,11 @@ app = FastAPI(
     description="A small to-do list API with full CRUD, stored in memory."
 )
 
+
+def row_to_task(row):
+    return {"id": row["id"], "title": row["title"], "done": bool(row["done"])}
+
+
 tasks = [
     {
         "id": 1,
@@ -95,7 +100,10 @@ async def health():
 @app.get("/tasks")
 async def get_tasks():
     """Return the full list of tasks."""
-    return tasks
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM tasks").fetchall()
+    conn.close()
+    return [row_to_task(row) for row in rows]
 
 
 @app.get(
@@ -104,13 +112,16 @@ async def get_tasks():
 )
 async def get_task(task_id: int):
     """Return a single task by its id."""
-    for task in tasks:
-        if task["id"] == task_id:
-            return task
-    return JSONResponse(
-        status_code=404,
-        content={"error": f"Task {task_id} not found"}
-    )
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?",
+                       (task_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Task {task_id} not found"}
+        )
+    return row_to_task(row)
 
 
 @app.post(

@@ -147,3 +147,15 @@ content-type: application/json
 Every endpoint can be tried out at `/docs` using the **Try it out** button.
 
 ![Swagger UI showing all Task API endpoints](screenshots/swagger.png)
+
+## Storage: SQLite (Assignment 2)
+
+Tasks are now stored in a SQLite database instead of a Python list, so they survive server restarts. I chose SQLite because it is a single file with zero setup: there is no separate database server to run, and Python's built-in `sqlite3` module means there is nothing extra to install. The database lives in `tasks.db` next to `main.py`. It is created automatically the first time the server starts, along with the `tasks` table (`id`, `title`, `done`), and the three example tasks are inserted only when the table is empty, so restarting never duplicates them. `tasks.db` is listed in `.gitignore`, so every clone starts with a fresh database. All queries use `?` placeholders (parameterized queries) rather than building SQL from user input. The endpoints, status codes and JSON responses are identical to the in-memory version, because only the storage layer changed. The start command is the same as before: `uvicorn main:app --reload`.
+
+## SQL by hand (Stage 4)
+
+```sql
+SELECT COUNT(*) FROM tasks;
+```
+
+This returned `4`, the number of rows in the tasks table.
